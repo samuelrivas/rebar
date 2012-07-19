@@ -425,6 +425,31 @@ cover_analyze(Config, FilteredModules, SrcModules) ->
             cover_print_coverage(lists:sort(Coverage));
         false ->
             ok
+    end,
+
+    %% Fail if total coverage is too low, if configured
+    check_coverage(Coverage, Config).
+
+check_coverage(Coverage, Config) ->
+    case rebar_config:get(Config, cover_min_coverage, 0.0) of
+        false ->
+            ok;
+        MinCoverage ->
+            check_min_coverage(Coverage, MinCoverage * 1.0)
+    end.
+
+check_min_coverage(Coverage, MinCoverage) ->
+    {Covered, NotCovered} = global_coverage(Coverage),
+    Total = Covered + NotCovered,
+    Percent = Covered * 100 / Total,
+    ?INFO("Covered ~p out of ~p (~.2f %) lines~n", [Covered, Total, Percent]),
+    case Percent < MinCoverage of
+        true ->
+            rebar_utils:abort("Coverage (~.2f %) is lower than "
+                              "acceptable minimum (~.2f %)~n",
+                              [Percent, MinCoverage]);
+        false ->
+            ok
     end.
 
 cover_close(not_enabled) ->
@@ -577,6 +602,11 @@ cover_print_coverage(Coverage) ->
                                    [Width, Mod, percentage(C, N)])
                   end, Coverage),
     ?CONSOLE("~n~*s : ~s~n", [Width, "Total", TotalCoverage]).
+
+global_coverage(Coverage) ->
+    lists:foldl(fun({_Mod, C, N}, {CAcc, NAcc}) ->
+                        {CAcc + C, NAcc + N}
+                end, {0, 0}, Coverage).
 
 cover_file(Module) ->
     filename:join([?EUNIT_DIR, atom_to_list(Module) ++ ".COVER.html"]).

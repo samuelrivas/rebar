@@ -82,6 +82,9 @@
 %% Whether to export coverage report to file. Default is `false'
 {cover_export_enabled, false}.
 
+%% Minimum acceptable coverage after testing (in percentage)
+{cover_min_coverage, 0.0}.
+
 %% == Common Test ==
 
 %% Override the default "test" directory in which SUITEs are located
