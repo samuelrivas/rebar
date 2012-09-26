@@ -393,8 +393,6 @@ perform_cover(false, _Config, _BeamFiles, _SrcModules) ->
 perform_cover(true, Config, BeamFiles, SrcModules) ->
     cover_analyze(Config, BeamFiles, SrcModules).
 
-cover_analyze(_Config, [], _SrcModules) ->
-    ok;
 cover_analyze(Config, FilteredModules, SrcModules) ->
     %% Generate coverage info for all the cover-compiled modules
     Coverage = lists:flatten([cover_analyze_mod(M)
