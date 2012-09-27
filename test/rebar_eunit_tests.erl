@@ -191,6 +191,21 @@ eunit_with_suites_and_tests_test_() ->
 
                {"Selected suite tests is run once",
                 ?_assert(string:str(RebarOut, "All 2 tests passed") =/= 0)}]
+      end},
+     {"Ensure EUnit runs with tests in a 'test' dir and no defined suite"
+      "(multiple test suites)",
+      setup, fun() -> setup_multisuite_project(), rebar("-v eunit") end,
+      fun teardown/1,
+      fun(RebarOut) ->
+              [ %% Tests in 'test' directory are found and run
+                assert_suite_run(RebarOut, myapp_mymod_tests),
+                assert_suite_run(RebarOut, myapp_mymod_more_tests),
+
+                %% Tests in 'src' directory are found and run
+                assert_suite_run(RebarOut, myapp_mymod),
+
+                {"Tests are only run once",
+                 ?_assert(string:str(RebarOut, "All 3 tests passed") =/= 0)}]
       end}].
 
 cover_test_() ->
@@ -324,6 +339,12 @@ basic_setup_test_() ->
          "myfunc3() -> ok.\n",
          "mygenerator_test_() -> [?_assertEqual(true, false)].\n"]).
 
+-define(myapp_mymod_more_tests,
+        ["-module(myapp_mymod_more_tests).\n",
+         "-compile([export_all]).\n",
+         "-include_lib(\"eunit/include/eunit.hrl\").\n",
+         "myfunc_test() -> ?assertMatch(ok, myapp_mymod:myfunc()).\n"]).
+
 -define(mysuite,
         ["-module(mysuite).\n",
          "-export([all_test_/0]).\n",
@@ -357,6 +378,11 @@ setup_project_with_multiple_modules() ->
     ok = file:write_file("test/myapp_mymod2_tests.erl", ?myapp_mymod2_tests),
     ok = file:write_file("src/myapp_mymod2.erl", ?myapp_mymod2),
     ok = file:write_file("src/myapp_mymod3.erl", ?myapp_mymod3).
+
+setup_multisuite_project() ->
+    setup_basic_project(),
+    ok = file:write_file("test/myapp_mymod_more_tests.erl",
+                         ?myapp_mymod_more_tests).
 
 setup_cover_project() ->
     setup_basic_project(),
@@ -424,3 +450,7 @@ assert_full_coverage(Mod) ->
                            string:str(X, "100%") =/= 0],
             ?assert(length(Result) =:= 1)
     end.
+
+assert_suite_run(RebarOut, Suite) ->
+    {lists:flatten(io_lib:format("Tests in ~p are found and run", [Suite])),
+     ?_assert(string:str(RebarOut, atom_to_list(Suite) ++ ":") =/= 0)}.
