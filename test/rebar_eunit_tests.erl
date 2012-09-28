@@ -197,15 +197,14 @@ eunit_with_suites_and_tests_test_() ->
       setup, fun() -> setup_multisuite_project(), rebar("-v eunit") end,
       fun teardown/1,
       fun(RebarOut) ->
-              [ %% Tests in 'test' directory are found and run
-                assert_suite_run(RebarOut, myapp_mymod_tests),
-                assert_suite_run(RebarOut, myapp_mymod_more_tests),
-
-                %% Tests in 'src' directory are found and run
-                assert_suite_run(RebarOut, myapp_mymod),
-
-                {"Tests are only run once",
-                 ?_assert(string:str(RebarOut, "All 3 tests passed") =/= 0)}]
+              [[assert_suite_run(RebarOut, Suite)
+                || Suite <- [myapp_mymod_tests
+                             ,  myapp_mymod_more_tests
+                             , myapp_mymod
+                            ]
+               ]
+               , {"All tests are run only once",
+                  ?_assert(string:str(RebarOut, "All 3 tests passed") =/= 0)}]
       end}].
 
 cover_test_() ->
