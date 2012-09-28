@@ -49,14 +49,10 @@ eunit_test_() ->
      setup, fun() -> setup_basic_project(), rebar("-v eunit") end,
      fun teardown/1,
      fun(RebarOut) ->
-             [{"Tests in 'test' directory are found and run",
-               ?_assert(string:str(RebarOut, "myapp_mymod_tests:") =/= 0)},
-
-              {"Tests in 'src' directory are found and run",
-               ?_assert(string:str(RebarOut, "myapp_mymod:") =/= 0)},
-
-              {"Tests are only run once",
-               ?_assert(string:str(RebarOut, "All 2 tests passed") =/= 0)}]
+             [ assert_suite_run(RebarOut, myapp_mymod_tests)
+             , assert_suite_run(RebarOut, myapp_mymod)
+             , {"Tests are only run once",
+                ?_assert(string:str(RebarOut, "All 2 tests passed") =/= 0)}]
      end}.
 
 eunit_with_suites_and_tests_test_() ->
