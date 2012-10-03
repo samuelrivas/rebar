@@ -203,6 +203,42 @@ eunit_with_suites_and_tests_test_() ->
                   ?_assert(string:str(RebarOut, "All 3 tests passed") =/= 0)}]
       end}].
 
+min_coverage_fail_test_() ->
+    {"Ensure rebar fails eunit tests when coverage is not high enough",
+     setup,
+     fun() ->
+             setup_untested_project_with_min_coverage(50),
+             rebar("eunit")
+     end,
+     fun teardown/1,
+     fun(RebarOut) ->
+             [ {"Tests pass",
+                ?_assert(re_match(RebarOut, "Test passed"))}
+             , {"Eunit check fails",
+                ?_assert(re_match(RebarOut, "ERROR: eunit failed"))}
+             , {"Low coverage is reported as an error",
+                ?_assert(re_match(RebarOut,
+                                  "ERROR: Coverage (.*) is lower than "
+                                  "acceptable minimum"))}
+             ]
+     end}.
+
+min_coverage_pass_test_() ->
+    {"Ensure rebar passes eunit tests when coverage is high enough",
+     setup,
+     fun() ->
+             setup_untested_project_with_min_coverage(10),
+             rebar("eunit")
+     end,
+     fun teardown/1,
+     fun(RebarOut) ->
+             [ {"Eunit check passes",
+                ?_assert(re_match(RebarOut, "Test passed"))}
+             , {"Test suite passes, and cover limit is not violated",
+                ?_assertNot(re_match(RebarOut, "ERROR"))}
+             ]
+     end}.
+
 cover_test_() ->
     {"Ensure Cover runs with tests in a test dir and no defined suite",
      setup, fun() -> setup_cover_project(), rebar("-v eunit") end,
@@ -360,12 +396,11 @@ setup_environment() ->
     prepare_rebar_script(),
     ok = file:set_cwd(?TMP_DIR).
 
-setup_basic_project() ->
+setup_untested_project() ->
     setup_environment(),
     rebar("create-app appid=myapp"),
     ok = file:make_dir("ebin"),
     ok = file:make_dir("test"),
-    ok = file:write_file("test/myapp_mymod_tests.erl", ?myapp_mymod_tests),
     ok = file:write_file("src/myapp_mymod.erl", ?myapp_mymod).
 
 setup_project_with_multiple_modules() ->
@@ -373,6 +408,10 @@ setup_project_with_multiple_modules() ->
     ok = file:write_file("test/myapp_mymod2_tests.erl", ?myapp_mymod2_tests),
     ok = file:write_file("src/myapp_mymod2.erl", ?myapp_mymod2),
     ok = file:write_file("src/myapp_mymod3.erl", ?myapp_mymod3).
+
+setup_basic_project() ->
+    setup_untested_project(),
+    ok = file:write_file("test/myapp_mymod_tests.erl", ?myapp_mymod_tests).
 
 setup_multisuite_project() ->
     setup_basic_project(),
@@ -388,6 +427,15 @@ setup_cover_project_with_suite() ->
     ok = file:write_file("test/mysuite.erl", ?mysuite),
     ok = file:write_file("test/myapp_mymod_defined_in_mysuite_tests.erl",
                          ?myapp_mymod_defined_in_mysuite_tests).
+
+setup_untested_project_with_min_coverage(MinCoverage) ->
+    setup_untested_project(),
+    ok = file:write_file(
+           "rebar.config",
+           io_lib:format(
+             "{cover_enabled, true}.~n"
+             "{cover_min_coverage, ~p}.~n",
+             [MinCoverage])).
 
 teardown(_) ->
     ok = file:set_cwd(".."),
@@ -449,3 +497,9 @@ assert_full_coverage(Mod) ->
 assert_suite_run(RebarOut, Suite) ->
     {lists:flatten(io_lib:format("Tests in ~p are found and run", [Suite])),
      ?_assert(string:str(RebarOut, atom_to_list(Suite) ++ ":") =/= 0)}.
+
+re_match(String, RE) ->
+    case re:run(String, RE) of
+        {match, _} -> true;
+        nomatch    -> false
+    end.
