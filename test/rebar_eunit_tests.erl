@@ -300,6 +300,17 @@ cover_coverage_test_() ->
        %% needs to be decremented in this case.
        assert_full_coverage("myapp_mymod")}]}.
 
+xref_deprecated_test_() ->
+    {"Xref detects deprecated function calls",
+     setup,
+     fun () -> setup_deprecated_project(), rebar("compile xref") end,
+     fun teardown/1,
+     fun(RebarOutput) ->
+             {"rebar xref crashes if there are deprecated function calls and "
+              "deprecated_function_calls check is activated",
+              ?_assert(re_match(RebarOutput, "ERROR: xref failed"))}
+     end}.
+
 %% ====================================================================
 %% Environment and Setup Tests
 %% ====================================================================
@@ -388,6 +399,23 @@ basic_setup_test_() ->
          "-include_lib(\"eunit/include/eunit.hrl\").\n",
          "myfunc_test() -> ?assertMatch(ok, myapp_mymod:myfunc()).\n"]).
 
+-define(my_illegal_test_module,
+        ["-module(my_illegal_test_module).\n",
+         "-compile([export_all]).\n",
+         "-include_lib(\"eunit/include/eunit.hrl\").\n",
+         "not_to_test() -> ?assert(false).\n"]).
+
+-define(deprecated_module,
+        ["-module(deprecated_module).\n",
+         "-compile([export_all]).\n",
+         "-deprecated({deprecated_function, 0}).\n",
+         "deprecated_function() -> old_stuff.\n"]).
+
+-define(deprecated_caller,
+        ["-module(deprecated_caller).\n",
+         "-compile([export_all]).\n",
+         "bad_call() -> deprecated_module:deprecated_function().\n"]).
+
 make_tmp_dir() ->
     ok = file:make_dir(?TMP_DIR).
 
@@ -412,6 +440,13 @@ setup_project_with_multiple_modules() ->
 setup_basic_project() ->
     setup_untested_project(),
     ok = file:write_file("test/myapp_mymod_tests.erl", ?myapp_mymod_tests).
+
+setup_deprecated_project() ->
+    setup_untested_project(),
+    ok = file:write_file("src/deprecated_module.erl", ?deprecated_module),
+    ok = file:write_file("src/deprecated_caller.erl", ?deprecated_caller),
+    ok = file:write_file("rebar.config",
+                         "{xref_checks, [deprecated_function_calls]}.\n").
 
 setup_multisuite_project() ->
     setup_basic_project(),
