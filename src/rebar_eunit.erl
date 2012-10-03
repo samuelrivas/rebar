@@ -559,9 +559,7 @@ cover_write_index_section(_F, _SectionName, []) ->
     ok;
 cover_write_index_section(F, SectionName, Coverage) ->
     %% Calculate total coverage
-    {Covered, NotCovered} = lists:foldl(fun({_Mod, C, N}, {CAcc, NAcc}) ->
-                                                {CAcc + C, NAcc + N}
-                                        end, {0, 0}, Coverage),
+    {Covered, NotCovered} = global_coverage(Coverage),
     TotalCoverage = percentage(Covered, NotCovered),
 
     %% Write the report
