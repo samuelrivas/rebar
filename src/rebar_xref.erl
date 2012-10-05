@@ -101,7 +101,7 @@ xref(Config, _) ->
     case ExportsNoWarn andalso UndefNoWarn andalso QueryNoWarn
         andalso DeprecatedNoWarn of
         false ->
-            ?ABORT;
+            ?FAIL;
         true ->
             ok
     end.
